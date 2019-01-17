@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"crypto/tls"
 )
 
 // The XML response returned by the WatchGuard server
@@ -23,17 +24,18 @@ type Resp struct {
 func main() {
 	args := os.Args[1:]
 
-	if len(args) != 1 {
+	if len(args) < 1 {
 		fmt.Fprintln(os.Stderr, "Usage: watchblob <vpn-host>")
 		os.Exit(1)
 	}
 
 	host := args[0]
-
-	username, password, err := readCredentials()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not read credentials: %v\n", err)
-	}
+	//username, password, err := readCredentials()
+	username := args[1]
+	password := args[2]
+	//if err != nil {
+	//	fmt.Fprintf(os.Stderr, "Could not read credentials: %v\n", err)
+	//}
 
 	fmt.Printf("Requesting challenge from %s as user %s\n", host, username)
 	challenge, err := triggerChallengeResponse(&host, &username, &password)
@@ -59,6 +61,7 @@ func readCredentials() (string, string, error) {
 	fmt.Printf("Username: ")
 	reader := bufio.NewReader(os.Stdin)
 	username, err := reader.ReadString('\n')
+
 
 	fmt.Printf("Password: ")
 	password, err := terminal.ReadPassword(syscall.Stdin)
@@ -95,6 +98,7 @@ func logon(host *string, challenge *Resp, token *string) (err error) {
 }
 
 func request(url string) (r Resp, err error) {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	resp, err := http.Get(url)
 	if err != nil {
 		return
